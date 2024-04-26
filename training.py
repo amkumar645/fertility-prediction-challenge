@@ -1,3 +1,11 @@
+import random
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, accuracy_score
+import pandas as pd
+import joblib
+import submission
+
 """
 This is an example script to train your model given the (cleaned) input dataset.
 
@@ -19,18 +27,25 @@ def train_save_model(cleaned_df, outcome_df):
     
     ## This script contains a bare minimum working example
     random.seed(1) # not useful here because logistic regression deterministic
-    
-    # Combine cleaned_df and outcome_df
-    model_df = pd.merge(cleaned_df, outcome_df, on="nomem_encr")
+    train_df = pd.read_csv(cleaned_df)
+    cleaned_df = submission.clean_df(train_df, None)
+    outcome = pd.read_csv(outcome_df)
+    outcome_supervised = outcome.dropna()['new_child']
 
-    # Filter cases for whom the outcome is not available
-    model_df = model_df[~model_df['new_child'].isna()]  
-    
-    # Logistic regression model
+    X = cleaned_df
+    y = outcome_supervised
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
+
     model = LogisticRegression()
+    model.fit(X_train, y_train)
 
-    # Fit the model
-    model.fit(model_df[['age']], model_df['new_child'])
+    y_pred = model.predict(X_test)
+
+    print("Accuracy:", accuracy_score(y_test, y_pred))
+    print("\nClassification Report:\n", classification_report(y_test, y_pred))
 
     # Save the model
     joblib.dump(model, "model.joblib")
+
+if __name__ == "__main__":
+    train_save_model("PreFerData/training_data/PreFer_train_data.csv", "PreFerData/training_data/PreFer_train_outcome.csv")
